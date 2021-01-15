@@ -1,14 +1,10 @@
 package com.example.recyclersampleapplication
 
-import android.content.res.Resources
-import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
-import android.widget.Toast
-import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.coroutines.coroutineContext
 
@@ -17,8 +13,8 @@ class DigitsAdapter(digitsContent: ArrayList<Int>, actionListener: RecycleViewIt
     private var mListener: RecycleViewItemClickListener = actionListener
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        public lateinit var textView: TextView
-        public lateinit var imageButton: ImageButton
+        public var textView: TextView
+        public var imageButton: ImageButton
 
         init {
                 textView = itemView.findViewById(R.id.itemNumberText)
