@@ -6,20 +6,14 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import kotlin.coroutines.coroutineContext
 
 class DigitsAdapter(digitsContent: ArrayList<Int>, actionListener: RecycleViewItemClickListener): RecyclerView.Adapter<DigitsAdapter.ViewHolder>() {
-    private var digits: ArrayList<Int> = digitsContent
-    private var mListener: RecycleViewItemClickListener = actionListener
+    private val digits: ArrayList<Int> = digitsContent
+    private val mListener: RecycleViewItemClickListener = actionListener
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        public var textView: TextView
-        public var imageButton: ImageButton
-
-        init {
-                textView = itemView.findViewById(R.id.itemNumberText)
-                imageButton = itemView.findViewById(R.id.deleteItemButton)
-        }
+        val textView: TextView = itemView.findViewById(R.id.itemNumberText)
+        val imageButton: ImageButton = itemView.findViewById(R.id.deleteItemButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -41,10 +35,5 @@ class DigitsAdapter(digitsContent: ArrayList<Int>, actionListener: RecycleViewIt
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.textView.text = digits[position].toString()
-//        holder.imageButton.setOnClickListener {
-//            digits.remove(position)
-//            notifyItemRemoved(position)
-//            notifyDataSetChanged()
-//        }
     }
 }

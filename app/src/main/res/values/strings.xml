@@ -12,4 +12,5 @@
 
     <string name="hint_to_number_field">Номер элемента</string>
     <string name="sample_text">Sample Text</string>
+    <string name="delete">Delete element</string>
 </resources>

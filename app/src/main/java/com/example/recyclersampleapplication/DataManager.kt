@@ -29,21 +29,12 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe (
-                        { digitToPaste ->
-                            try {
-                                mDataLocker.lock()
+                        { index ->
+                            Log.d(RECYCLERVIEW_FILLER_OBSERVING_TAG, "onNext branch:" +
+                                    "Random number: ${mDigitsList[index]}," +
+                                    "Random index: $index")
 
-                                val randomIndex = Random().nextInt(mDigitsList.size)
-
-                                Log.d(RECYCLERVIEW_FILLER_OBSERVING_TAG, "onNext branch:" +
-                                        "Random number: $digitToPaste," +
-                                        "Random index: $randomIndex")
-
-                                mDigitsList.add(randomIndex, digitToPaste)
-                                mActionListener.itemAdded(randomIndex)
-                            } finally {
-                                mDataLocker.unlock()
-                            }
+                            mActionListener.itemAdded(index)
                         },
                         {
                             Log.e(RECYCLERVIEW_FILLER_OBSERVING_TAG, "onError branch: $it")
@@ -54,19 +45,9 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
-                        { _->
-                            try {
-                                mDataLocker.lock()
-
-                                Log.d(RECYCLERVIEW_INCREASER_OBSERVING_TAG, "onNext branch")
-
-                                for (i in 0 until mDigitsList.size)
-                                    mDigitsList[i]++
-
-                                mActionListener.eachDigitIncreased()
-                            } finally {
-                                mDataLocker.unlock()
-                            }
+                        {
+                            Log.d(RECYCLERVIEW_INCREASER_OBSERVING_TAG, "onNext branch")
+                            mActionListener.eachDigitIncreased()
                         },
                         {
                             Log.e(RECYCLERVIEW_INCREASER_OBSERVING_TAG, "onError branch: $it")
@@ -79,7 +60,7 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
             mDataLocker.lock()
 
             Log.d(TRASH_BEAN_CLICKED_TAG, "ItemPos: $position")
-            Log.d(TRASH_BEAN_CLICKED_TAG, "Array before removing: " + mDigitsList)
+            Log.d(TRASH_BEAN_CLICKED_TAG, "Array before removing: $mDigitsList")
 
             if (mPoolInterchangeIsOn)
                 mRecycledDigitsList.add(mDigitsList.removeAt(position))
@@ -88,8 +69,8 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
 
             mActionListener.itemRemoved(position)
 
-            Log.d(TRASH_BEAN_CLICKED_TAG, "Array after removing: " + mDigitsList)
-            Log.d(TRASH_BEAN_CLICKED_TAG, "RecycledPool array now: " + mRecycledDigitsList)
+            Log.d(TRASH_BEAN_CLICKED_TAG, "Array after removing: $mDigitsList")
+            Log.d(TRASH_BEAN_CLICKED_TAG, "RecycledPool array now: $mRecycledDigitsList")
         } finally {
             mDataLocker.unlock()
         }
@@ -131,20 +112,35 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                 else
                     continue
 
-                if (mPoolInterchangeIsOn && mRecycledDigitsList.isNotEmpty())
-                    it.onNext(mRecycledDigitsList.removeAt(0))
-                else if (!mPoolInterchangeIsOn) {
-                    val randomNumber = Random().nextInt().absoluteValue % 100
-                    it.onNext(randomNumber)
+                val randomIndex = Random().nextInt(mDigitsList.size)
+                var numberToInsert: Int
+
+                // TODO
+                if (mPoolInterchangeIsOn && mRecycledDigitsList.isNotEmpty()) {
+                    numberToInsert = mRecycledDigitsList.removeAt(0)
                 }
+                else if (!mPoolInterchangeIsOn) {
+                    numberToInsert = Random().nextInt().absoluteValue % 100
+                }
+                else
+                    continue
+
+                try {
+                    mDataLocker.lock()
+                    mDigitsList.add(randomIndex, numberToInsert)
+                } finally {
+                    mDataLocker.unlock()
+                }
+
+                it.onNext(randomIndex)
             }
         }
     }
 
-    // Что значит "постоянно"?
     private fun increaseAllDigitsTask(): Observable<Int> {
         return Observable.create {
             while (true) {
+                // TODO Interpretator function
                 if (mIncreaseValuesPeriod > 0L)
                     Thread.sleep(mIncreaseValuesPeriod)
                 else if (mIncreaseValuesPeriod < 0L) {
@@ -154,7 +150,17 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                 else
                     continue
 
-                it.onNext(1)     // TODO onComplete or something
+                try {
+                    mDataLocker.lock()
+
+                    for (i in 0 until mDigitsList.size)
+                        mDigitsList[i]++
+
+                } finally {
+                    mDataLocker.unlock()
+                }
+
+                it.onNext(1)
             }
         }
     }

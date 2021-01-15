@@ -28,8 +28,6 @@
             android:textSize="@dimen/text_size"
             android:text="@string/sample_text"
             tools:ignore="RtlHardcoded"
-
-            style="@style/RecyclerViewItem"
             />
 
         <ImageButton
@@ -41,7 +39,7 @@
             android:layout_margin="8dp"
             android:gravity="center"
             android:layout_gravity="center"
-            android:contentDescription="TODO" />
+            android:contentDescription="@string/delete" />
 
     </LinearLayout>
 
