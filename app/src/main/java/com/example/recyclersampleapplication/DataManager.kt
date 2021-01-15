@@ -129,7 +129,7 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
 
                 if (mPoolInterchangeIsOn && mRecycledDigitsList.isNotEmpty())
                     it.onNext(mRecycledDigitsList.removeAt(0))
-                else if (mPoolInterchangeIsOn) {
+                else if (!mPoolInterchangeIsOn) {
                     val randomNumber = (Math.random() * 100).toInt()        // TODO
                     it.onNext(randomNumber)
                 }
@@ -145,7 +145,7 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                 Thread.sleep(randomArrayIncrementationTime)
 
                 // Лучше вообще тред не создавать тогда...
-                if (!mValuesIncreasingIsOn)
+                if (mValuesIncreasingIsOn)
                     it.onNext(1)     // TODO onComplete or something
             }
         }
