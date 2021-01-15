@@ -29,16 +29,17 @@ class MainActivity : AppCompatActivity(), RecycleViewItemClickListener, RecycleV
 
         recyclerViewAdapter = DigitsAdapter(mDataManager.getData(), this)
         recyclerView.adapter = recyclerViewAdapter
-
-        Log.d("[Main Thread]", Thread.currentThread().id.toString())
     }
 
     override fun onStart() {
         super.onStart()
 
-        mDataManager.setPoolInterchange(true)
-        mDataManager.setValuesIncreasing(true)
-        mDataManager.startManipulations()
+        mDataManager
+                .setPoolInterchange(true)
+                .setValuesIncreasing(true)
+                .setNewValueInsertionPeriod(5000)
+                .setValuesIncreasePeriod(3500)
+                .startManipulations()
     }
 
     override fun onViewClicked(clickedViewId: Int, clickedItemPosition: Int) {

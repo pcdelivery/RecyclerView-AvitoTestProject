@@ -1,7 +1,6 @@
 package com.example.recyclersampleapplication
 
 import android.util.Log
-import androidx.recyclerview.widget.RecyclerView
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.schedulers.Schedulers
@@ -14,21 +13,19 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
     private val mDigitsList = ArrayList<Int>()
     private val mRecycledDigitsList = ArrayList<Int>()
     private val mDataLocker = ReentrantLock(true)
-    private var mPoolInterchangeIsOn = true
-    private var mValuesIncreasingIsOn = true
     private val mActionListener = actionListener
-//    private val mRecyclerView = view
-//    private lateinit var mRecyclerViewAdapter: DigitsAdapter
+
+    private var mPoolInterchangeIsOn = false
+    private var mValuesIncreasingIsOn = false
+    private var mIncreaseValuesPeriod = 5000L
+    private var mInsertNewValuePeriod = 6000L
 
     init {
         mDigitsList.addAll(initialData.toList())
-
-//        mRecyclerViewAdapter = DigitsAdapter(mDigitsList, this)
-//        mRecyclerView.adapter = mRecyclerViewAdapter
     }
 
     fun startManipulations() {
-        pasteNewDigit()
+        insertNewDigitTask()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe (
@@ -43,7 +40,6 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                                         "Random index: $randomIndex")
 
                                 mDigitsList.add(randomIndex, digitToPaste)
-//                                mRecyclerViewAdapter.notifyItemInserted(randomIndex)
                                 mActionListener.itemAdded(randomIndex)
                             } finally {
                                 mDataLocker.unlock()
@@ -54,7 +50,7 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                         }
                 )
 
-        increaseAllDigits()
+        increaseAllDigitsTask()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
@@ -67,8 +63,6 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                                 for (i in 0 until mDigitsList.size)
                                     mDigitsList[i]++
 
-//                                mRecyclerViewAdapter.notifyDataSetChanged()
-//                                mRecyclerView.startAnimation(AnimationUtils.loadAnimation(mRecyclerView.context, R.anim.shake))
                                 mActionListener.eachDigitIncreased()
                             } finally {
                                 mDataLocker.unlock()
@@ -92,7 +86,6 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
             else
                 mDigitsList.removeAt(position)
 
-//            mRecyclerViewAdapter.notifyItemRemoved(position)
             mActionListener.itemRemoved(position)
 
             Log.d(TRASH_BEAN_CLICKED_TAG, "Array after removing: " + mDigitsList)
@@ -102,51 +95,66 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
         }
     }
 
-    fun setPoolInterchange(bool: Boolean) {
+    fun setPoolInterchange(bool: Boolean): DataManager {
         mPoolInterchangeIsOn = bool
+        return this
     }
 
-    fun isPoolInterchangeOn(): Boolean {
-        return mPoolInterchangeIsOn
-    }
-
-    fun setValuesIncreasing(bool: Boolean) {
+    fun setValuesIncreasing(bool: Boolean): DataManager {
         mValuesIncreasingIsOn = bool
+        return this
     }
 
-    fun isValuesIncreaseSet() : Boolean {
-        return mValuesIncreasingIsOn
+    fun setNewValueInsertionPeriod(millis: Long): DataManager {
+        mInsertNewValuePeriod = millis
+        return this
+    }
+
+    fun setValuesIncreasePeriod(millis: Long): DataManager {
+        mIncreaseValuesPeriod = millis
+        return this
     }
 
     fun getData(): ArrayList<Int> {
         return mDigitsList
     }
 
-    private fun pasteNewDigit(): Observable<Int> {
+    private fun insertNewDigitTask(): Observable<Int> {
         return Observable.create {
             while (true) {
-                Thread.sleep(5000)
+                if (mInsertNewValuePeriod > 0L)
+                    Thread.sleep(mInsertNewValuePeriod)
+                else if (mInsertNewValuePeriod < 0L) {
+                    val randomLocalPeriod = Random().nextLong().absoluteValue % mInsertNewValuePeriod.absoluteValue
+                    Thread.sleep(randomLocalPeriod)
+                }
+                else
+                    continue
 
                 if (mPoolInterchangeIsOn && mRecycledDigitsList.isNotEmpty())
                     it.onNext(mRecycledDigitsList.removeAt(0))
                 else if (!mPoolInterchangeIsOn) {
-                    val randomNumber = (Math.random() * 100).toInt()        // TODO
+                    val randomNumber = Random().nextInt().absoluteValue % 100
                     it.onNext(randomNumber)
                 }
             }
         }
     }
 
-    private fun increaseAllDigits(): Observable<Int> {
+    // Что значит "постоянно"?
+    private fun increaseAllDigitsTask(): Observable<Int> {
         return Observable.create {
             while (true) {
-                // Что значит "постоянно"?
-                val randomArrayIncrementationTime = Random().nextLong().absoluteValue % 6000
-                Thread.sleep(randomArrayIncrementationTime)
+                if (mIncreaseValuesPeriod > 0L)
+                    Thread.sleep(mIncreaseValuesPeriod)
+                else if (mIncreaseValuesPeriod < 0L) {
+                    val randomLocalPeriod = Random().nextLong().absoluteValue % mIncreaseValuesPeriod.absoluteValue
+                    Thread.sleep(randomLocalPeriod)
+                }
+                else
+                    continue
 
-                // Лучше вообще тред не создавать тогда...
-                if (mValuesIncreasingIsOn)
-                    it.onNext(1)     // TODO onComplete or something
+                it.onNext(1)     // TODO onComplete or something
             }
         }
     }
