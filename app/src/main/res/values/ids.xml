@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="itemNumberText" type="id"/>
+    <item name="deleteItemButton" type="id"/>
+</resources>
