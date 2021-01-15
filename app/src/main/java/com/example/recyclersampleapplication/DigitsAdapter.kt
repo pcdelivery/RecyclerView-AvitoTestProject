@@ -7,6 +7,12 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
+/**
+ * Custom RecyclerView adapter to manage TextView + ImageButton bundle, based on integer array data
+ *
+ * @param digitsContent Data array of Int - identifier for each RecyclerView element
+ * @param actionListener On element click listener to update RecyclerView layout from Activity
+ */
 class DigitsAdapter(digitsContent: ArrayList<Int>, actionListener: RecycleViewItemClickListener): RecyclerView.Adapter<DigitsAdapter.ViewHolder>() {
     private val digits: ArrayList<Int> = digitsContent
     private val mListener: RecycleViewItemClickListener = actionListener

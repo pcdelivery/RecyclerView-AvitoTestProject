@@ -2,7 +2,6 @@ package com.example.recyclersampleapplication
 
 import android.content.res.Configuration
 import android.os.Bundle
-import android.util.Log
 import android.view.animation.AnimationUtils
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
@@ -47,6 +46,7 @@ class MainActivity : AppCompatActivity(), RecycleViewItemClickListener, RecycleV
             mDataManager.removeElementAt(clickedItemPosition)
     }
 
+    // triggers each time when orientation changes
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 

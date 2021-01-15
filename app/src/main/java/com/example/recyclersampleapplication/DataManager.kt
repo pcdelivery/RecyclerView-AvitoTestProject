@@ -9,6 +9,16 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.ArrayList
 import kotlin.math.absoluteValue
 
+/**
+ * Object for RecyclerView data managing:
+ *      1) New data elements appending
+ *      2) All data elements incrementation
+ *
+ * Insertion and incrementation periods, working mode can be configured
+ *
+ * @param actionListener Data change listener to update RecyclerView layout from Activity. Triggers each time when data changes
+ * @param initialData Integer set to fill RecyclerView on create
+ */
 class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: Int){
     private val mDigitsList = ArrayList<Int>()
     private val mRecycledDigitsList = ArrayList<Int>()
@@ -24,6 +34,13 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
         mDigitsList.addAll(initialData.toList())
     }
 
+    /**
+     * The method starts new async tasks on separate threads:
+     *      1) New element insertion
+     *      2) All elements incrementation
+     *
+     * Intermediate results are observed in main thread
+     */
     fun startManipulations() {
         insertNewDigitTask()
                 .subscribeOn(Schedulers.newThread())
@@ -55,6 +72,10 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
                 )
     }
 
+    /**
+     * Removes element in data array;
+     * Triggers actionListener itemRemoved() method
+     */
     fun removeElementAt(position: Int) {
         try {
             mDataLocker.lock()
@@ -76,21 +97,35 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
         }
     }
 
+    /**
+     * Sets new elements insertion mode
+     * @param bool true - grab new elements from already removed elements pool (won't insert if pool is empty); false - generates new digit to insert
+     */
     fun setPoolInterchange(bool: Boolean): DataManager {
         mPoolInterchangeIsOn = bool
         return this
     }
 
+    /**
+     * Sets array elements incrementation mode
+     * @param bool true - increase all elements in array according to specified time period; false - don't increase elements
+     */
     fun setValuesIncreasing(bool: Boolean): DataManager {
         mValuesIncreasingIsOn = bool
         return this
     }
 
+    /**
+     * Set insertion time period in milliseconds
+     */
     fun setNewValueInsertionPeriod(millis: Long): DataManager {
         mInsertNewValuePeriod = millis
         return this
     }
 
+    /**
+     * Set incrementation time period in milliseconds
+     */
     fun setValuesIncreasePeriod(millis: Long): DataManager {
         mIncreaseValuesPeriod = millis
         return this
@@ -100,6 +135,9 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
         return mDigitsList
     }
 
+    /**
+     * Insertion async task
+     */
     private fun insertNewDigitTask(): Observable<Int> {
         return Observable.create {
             while (true) {
@@ -137,6 +175,9 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
         }
     }
 
+    /**
+     * Incrementation async task
+     */
     private fun increaseAllDigitsTask(): Observable<Int> {
         return Observable.create {
             while (true) {
