@@ -13,9 +13,10 @@ import androidx.recyclerview.widget.RecyclerView
  * @param digitsContent Data array of Int - identifier for each RecyclerView element
  * @param actionListener On element click listener to update RecyclerView layout from Activity
  */
-class DigitsAdapter(digitsContent: ArrayList<Int>, actionListener: RecycleViewItemClickListener): RecyclerView.Adapter<DigitsAdapter.ViewHolder>() {
+class DigitsAdapter(digitsContent: ArrayList<Int>, actionListener: RecycleViewItemClickListener)
+    : RecyclerView.Adapter<DigitsAdapter.ViewHolder>() {
     private val digits: ArrayList<Int> = digitsContent
-    private val mListener: RecycleViewItemClickListener = actionListener
+    private val clickListener: RecycleViewItemClickListener = actionListener
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val textView: TextView = itemView.findViewById(R.id.itemNumberText)
@@ -29,7 +30,7 @@ class DigitsAdapter(digitsContent: ArrayList<Int>, actionListener: RecycleViewIt
         val holder = ViewHolder(v)
 
         holder.imageButton.setOnClickListener {
-            mListener.onViewClicked(it.id, holder.adapterPosition)
+            clickListener.onViewClicked(it.id, holder.adapterPosition)
         }
 
         return holder

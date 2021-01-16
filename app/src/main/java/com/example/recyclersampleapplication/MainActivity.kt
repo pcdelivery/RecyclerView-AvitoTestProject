@@ -11,29 +11,31 @@ class MainActivity : AppCompatActivity(), RecycleViewItemClickListener, RecycleV
     private lateinit var recyclerView: RecyclerView
     private lateinit var recyclerViewAdapter: DigitsAdapter
 
-    private lateinit var mLayoutManager: GridLayoutManager
-    private lateinit var mDataManager: DataManager
+    private lateinit var layoutManager: GridLayoutManager
+    private lateinit var dataManager: DataManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mLayoutManager = GridLayoutManager(this, 2)
+        val initialColumns = getOrientationColumns(resources.configuration.orientation)
+
+        layoutManager = GridLayoutManager(this, initialColumns)
 
         recyclerView = findViewById(R.id.recyclerViewMain)
         recyclerView.setHasFixedSize(true)
-        recyclerView.layoutManager = mLayoutManager
+        recyclerView.layoutManager = layoutManager
 
-        mDataManager = DataManager(this, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+        dataManager = DataManager(this, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
 
-        recyclerViewAdapter = DigitsAdapter(mDataManager.getData(), this)
+        recyclerViewAdapter = DigitsAdapter(dataManager.getData(), this)
         recyclerView.adapter = recyclerViewAdapter
     }
 
     override fun onStart() {
         super.onStart()
 
-        mDataManager
+        dataManager
                 .setPoolInterchange(true)
                 .setValuesIncreasing(true)
                 .setNewValueInsertionPeriod(5000)
@@ -43,17 +45,23 @@ class MainActivity : AppCompatActivity(), RecycleViewItemClickListener, RecycleV
 
     override fun onViewClicked(clickedViewId: Int, clickedItemPosition: Int) {
         if (clickedViewId == R.id.deleteItemButton)
-            mDataManager.removeElementAt(clickedItemPosition)
+            dataManager.removeElementAt(clickedItemPosition)
     }
 
-    // triggers each time when orientation changes
+    private fun getOrientationColumns(orientation: Int): Int {
+        return when (orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> 4
+            else -> 2
+        }
+    }
+
+    /**
+     * Triggers each time when orientation changes
+     */
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 
-        if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT)
-            mLayoutManager.spanCount = 2
-        else
-            mLayoutManager.spanCount = 4
+        layoutManager.spanCount = getOrientationColumns(newConfig.orientation)
     }
 
     override fun itemAdded(position: Int) {

@@ -16,22 +16,23 @@ import kotlin.math.absoluteValue
  *
  * Insertion and incrementation periods, working mode can be configured
  *
- * @param actionListener Data change listener to update RecyclerView layout from Activity. Triggers each time when data changes
+ * @param actionListener Data change listener to update RecyclerView layout from Activity.
+ *  Triggers each time when data changes
  * @param initialData Integer set to fill RecyclerView on create
  */
 class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: Int){
-    private val mDigitsList = ArrayList<Int>()
-    private val mRecycledDigitsList = ArrayList<Int>()
-    private val mDataLocker = ReentrantLock(true)
-    private val mActionListener = actionListener
+    private val dataSet = ArrayList<Int>()
+    private val recycledDataSet = ArrayList<Int>()
+    private val dataLocker = ReentrantLock(true)
+    private val dataChangeActionListener = actionListener
 
-    private var mPoolInterchangeIsOn = false
-    private var mValuesIncreasingIsOn = false
-    private var mIncreaseValuesPeriod = 5000L
-    private var mInsertNewValuePeriod = 6000L
+    private var poolInterchangeIsOn = false
+    private var valuesIncreasingIsOn = false
+    private var increaseValuesPeriod = 5000L
+    private var insertNewValuePeriod = 6000L
 
     init {
-        mDigitsList.addAll(initialData.toList())
+        dataSet.addAll(initialData.toList())
     }
 
     /**
@@ -45,13 +46,12 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
         insertNewDigitTask()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe (
-                        { index ->
+                .subscribe ( { index ->
                             Log.d(RECYCLERVIEW_FILLER_OBSERVING_TAG, "onNext branch:" +
-                                    "Random number: ${mDigitsList[index]}," +
+                                    "Random number: ${dataSet[index]}," +
                                     "Random index: $index")
 
-                            mActionListener.itemAdded(index)
+                            dataChangeActionListener.itemAdded(index)
                         },
                         {
                             Log.e(RECYCLERVIEW_FILLER_OBSERVING_TAG, "onError branch: $it")
@@ -61,10 +61,9 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
         increaseAllDigitsTask()
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        {
+                .subscribe( {
                             Log.d(RECYCLERVIEW_INCREASER_OBSERVING_TAG, "onNext branch")
-                            mActionListener.eachDigitIncreased()
+                            dataChangeActionListener.eachDigitIncreased()
                         },
                         {
                             Log.e(RECYCLERVIEW_INCREASER_OBSERVING_TAG, "onError branch: $it")
@@ -78,40 +77,42 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
      */
     fun removeElementAt(position: Int) {
         try {
-            mDataLocker.lock()
+            dataLocker.lock()
 
             Log.d(TRASH_BEAN_CLICKED_TAG, "ItemPos: $position")
-            Log.d(TRASH_BEAN_CLICKED_TAG, "Array before removing: $mDigitsList")
+            Log.d(TRASH_BEAN_CLICKED_TAG, "Array before removing: $dataSet")
 
-            if (mPoolInterchangeIsOn)
-                mRecycledDigitsList.add(mDigitsList.removeAt(position))
+            if (poolInterchangeIsOn)
+                recycledDataSet.add(dataSet.removeAt(position))
             else
-                mDigitsList.removeAt(position)
+                dataSet.removeAt(position)
 
-            mActionListener.itemRemoved(position)
+            dataChangeActionListener.itemRemoved(position)
 
-            Log.d(TRASH_BEAN_CLICKED_TAG, "Array after removing: $mDigitsList")
-            Log.d(TRASH_BEAN_CLICKED_TAG, "RecycledPool array now: $mRecycledDigitsList")
+            Log.d(TRASH_BEAN_CLICKED_TAG, "Array after removing: $dataSet")
+            Log.d(TRASH_BEAN_CLICKED_TAG, "RecycledPool array now: $recycledDataSet")
         } finally {
-            mDataLocker.unlock()
+            dataLocker.unlock()
         }
     }
 
     /**
      * Sets new elements insertion mode
-     * @param bool true - grab new elements from already removed elements pool (won't insert if pool is empty); false - generates new digit to insert
+     * @param bool true - grab new elements from already removed elements pool
+     *  (won't insert if pool is empty); false - generates new digit to insert
      */
     fun setPoolInterchange(bool: Boolean): DataManager {
-        mPoolInterchangeIsOn = bool
+        poolInterchangeIsOn = bool
         return this
     }
 
     /**
      * Sets array elements incrementation mode
-     * @param bool true - increase all elements in array according to specified time period; false - don't increase elements
+     * @param bool true - increase all elements in array according to specified time period;
+     *  false - don't increase elements
      */
     fun setValuesIncreasing(bool: Boolean): DataManager {
-        mValuesIncreasingIsOn = bool
+        valuesIncreasingIsOn = bool
         return this
     }
 
@@ -119,7 +120,7 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
      * Set insertion time period in milliseconds
      */
     fun setNewValueInsertionPeriod(millis: Long): DataManager {
-        mInsertNewValuePeriod = millis
+        insertNewValuePeriod = millis
         return this
     }
 
@@ -127,48 +128,60 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
      * Set incrementation time period in milliseconds
      */
     fun setValuesIncreasePeriod(millis: Long): DataManager {
-        mIncreaseValuesPeriod = millis
+        increaseValuesPeriod = millis
         return this
     }
 
     fun getData(): ArrayList<Int> {
-        return mDigitsList
+        return dataSet
     }
 
     /**
-     * Insertion async task
+     * Insertion async task.
+     * Inserts new value at a random place in data set according to specified time period
+     *
+     * Interprets specified insertionNewValuePeriod as follows:
+     *      1) If insertionNewValuePeriod == 0, insertion is off
+     *      2) If insertionNewValuePeriod > 0, inserts at each period
+     *      3) If insertionNewValuePeriod < 0, inserts at a random time between 0 and
+     *          insertionNewValuePeriod
+     *
+     * If pool interchange mode is off, still inserts random data elements from 0 to 100
+     *
+     * @return Index of inserted value to update RecycleView adapter
      */
     private fun insertNewDigitTask(): Observable<Int> {
         return Observable.create {
             while (true) {
-                if (mInsertNewValuePeriod > 0L)
-                    Thread.sleep(mInsertNewValuePeriod)
-                else if (mInsertNewValuePeriod < 0L) {
-                    val randomLocalPeriod = Random().nextLong().absoluteValue % mInsertNewValuePeriod.absoluteValue
+                if (insertNewValuePeriod > 0L) {
+                    Thread.sleep(insertNewValuePeriod)
+                }
+                else if (insertNewValuePeriod < 0L) {
+                    val randomLocalPeriod =
+                            Random().nextLong().absoluteValue % insertNewValuePeriod.absoluteValue
                     Thread.sleep(randomLocalPeriod)
                 }
-                else
-                    continue
+                else continue
 
-                val randomIndex = Random().nextInt(mDigitsList.size)
-                var numberToInsert: Int
+                val randomIndex = Random().nextInt(dataSet.size)
 
-                // TODO
-                if (mPoolInterchangeIsOn && mRecycledDigitsList.isNotEmpty()) {
-                    numberToInsert = mRecycledDigitsList.removeAt(0)
-                }
-                else if (!mPoolInterchangeIsOn) {
-                    numberToInsert = Random().nextInt().absoluteValue % 100
-                }
-                else
-                    continue
+                val numberToInsert = if (poolInterchangeIsOn && recycledDataSet.isNotEmpty()) {
+                    recycledDataSet.removeAt(0)
+                } else if (!poolInterchangeIsOn) {
+                    Random().nextInt().absoluteValue % 100
+                } else continue
+
+                Log.d(RECYCLERVIEW_FILLER_METHOD_TAG, "Random index: $randomIndex\tValue to insert: $numberToInsert")
+                Log.d(RECYCLERVIEW_FILLER_METHOD_TAG, "Data set before insertion: $dataSet")
 
                 try {
-                    mDataLocker.lock()
-                    mDigitsList.add(randomIndex, numberToInsert)
+                    dataLocker.lock()
+                    dataSet.add(randomIndex, numberToInsert)
                 } finally {
-                    mDataLocker.unlock()
+                    dataLocker.unlock()
                 }
+
+                Log.d(RECYCLERVIEW_FILLER_METHOD_TAG, "Data set after insertion: $dataSet")
 
                 it.onNext(randomIndex)
             }
@@ -176,30 +189,42 @@ class DataManager(actionListener: RecycleViewDataChanged, vararg initialData: In
     }
 
     /**
-     * Incrementation async task
+     * Incrementation async task. Increases each element in data set according to specified time
+     * period.
+     *
+     * Interprets specified insertionNewValuePeriod as follows:
+     *      1) If insertionNewValuePeriod == 0, insertion is off
+     *      2) If insertionNewValuePeriod > 0, inserts at each period
+     *      3) If insertionNewValuePeriod < 0, inserts at a random time between 0 and
+     *          insertionNewValuePeriod
      */
     private fun increaseAllDigitsTask(): Observable<Int> {
         return Observable.create {
             while (true) {
-                // TODO Interpretator function
-                if (mIncreaseValuesPeriod > 0L)
-                    Thread.sleep(mIncreaseValuesPeriod)
-                else if (mIncreaseValuesPeriod < 0L) {
-                    val randomLocalPeriod = Random().nextLong().absoluteValue % mIncreaseValuesPeriod.absoluteValue
+                if (increaseValuesPeriod > 0L) {
+                    Thread.sleep(increaseValuesPeriod)
+                }
+                else if (increaseValuesPeriod < 0L) {
+                    val randomLocalPeriod = Random().nextLong().absoluteValue % increaseValuesPeriod.absoluteValue
                     Thread.sleep(randomLocalPeriod)
                 }
-                else
-                    continue
+                else continue
+
+                if (!valuesIncreasingIsOn) continue
+
+                Log.d(RECYCLERVIEW_INCREASER_METHOD_TAG, "Data set before data increase: $dataSet")
 
                 try {
-                    mDataLocker.lock()
+                    dataLocker.lock()
 
-                    for (i in 0 until mDigitsList.size)
-                        mDigitsList[i]++
+                    for (i in 0 until dataSet.size)
+                        dataSet[i]++
 
                 } finally {
-                    mDataLocker.unlock()
+                    dataLocker.unlock()
                 }
+
+                Log.d(RECYCLERVIEW_INCREASER_METHOD_TAG, "Data set after data increase: $dataSet")
 
                 it.onNext(1)
             }
